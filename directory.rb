@@ -1,10 +1,11 @@
+require 'csv'
 @students = []
 
 def print_menu
   puts "1. Input the students"
   puts "2. Show the students"
-  puts "3. Save the list to students.csv"
-  puts "4. Load the list from students.csv"
+  puts "3. Save the list to a .csv file"
+  puts "4. Load the list from a .csv file"
   puts "9. Exit"
 end
 
@@ -23,8 +24,10 @@ def process(selection)
     show_students
   when "3"
     save_students
+    puts "Success!"
   when "4"
-    load_students
+    load_students(filename_input)
+    puts "Success!"
   when "9"
     exit
   else
@@ -39,11 +42,15 @@ def input_students
   # while the name is not empty, repeat this code
   while !name.empty? do
     # add the student hash to the array
-    @students << {name: name, cohort: :november}
+    add_student(name, :november)
     puts "Now we have #{@students.count} students"
     # get another name from the user
     name = STDIN.gets.chomp
   end
+end
+
+def add_student(name, cohort)
+  @students << {name: name, cohort: cohort}
 end
 
 def show_students
@@ -68,36 +75,45 @@ def print_footer
 end
 
 def save_students
-  # open the file for writing
-  file = File.open("students.csv", "w")
-  # iterate over the array of students
-  @students.each do |student|
-    student_data = [student[:name], student[:cohort]]
-    csv_line = student_data.join(",")
-    file.puts csv_line
+  filename = filename_input
+  csv_file = CSV.generate do |csv|
+    @students.each do |student|
+      csv << [student[:name], student[:cohort]]
+    end
   end
-  file.close
+  File.open(filename, "w") do |file|
+    file.puts csv_file
+  end
 end
 
 def load_students(filename = "students.csv")
-  file = File.open(filename, "r")
-  file.readlines.each do |line|
-  name, cohort = line.chomp.split(',')
-    @students << {name: name, cohort: cohort.to_sym}
+  CSV.foreach(filename) do |r|
+    add_student(r[0], r[1].to_sym)
   end
-  file.close
 end
 
 def try_load_students
   filename = ARGV.first
-  return if filename.nil?
-  if File.exists?(filename)
+  if filename.nil?
+    load_students
+     puts "Loaded #{@students.count} from students.csv"
+  elsif File.exists?(filename)
     load_students(filename)
      puts "Loaded #{@students.count} from #{filename}"
   else
     puts "Sorry #{filename} doesn't exist."
     exit
   end
+end
+
+def filename_input
+  puts "Enter file name ending in \".csv\":"
+  filename = gets.chomp
+  while filename[-4..-1] != ".csv"
+    puts "I'm sorry that doesn't look like a .csv file, please try again"
+    filename = gets.chomp
+  end
+  return filename
 end
 
 try_load_students
